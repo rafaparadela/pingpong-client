@@ -14,15 +14,48 @@ object ProjectPlugin extends AutoPlugin {
       val logbackClassic = "1.2.3"
       val mu             = "0.18.0"
       val pureconfig     = "0.10.2"
-      val circeVersion   = "0.11.1"
     }
   }
 
   import autoImport._
 
+  private lazy val codeGenSettings: Seq[Def.Setting[_]] = Seq(
+    idlType := "avro",
+    srcGenSerializationType := "Avro",
+    srcGenJarNames := Seq("ping-pong-protocol"),
+    sourceGenerators in Compile += (srcGen in Compile).taskValue
+  )
+
+  private lazy val commonSettings: Seq[Def.Setting[_]] = Seq(
+    libraryDependencies ++= Seq(
+      "ch.qos.logback"    % "logback-classic" % V.logbackClassic,
+      "io.chrisdavenport" %% "log4cats-core"  % V.log4cats,
+      "io.chrisdavenport" %% "log4cats-slf4j" % V.log4cats
+    )
+  )
+
+  lazy val noPublishSettings: Seq[Def.Setting[_]] = Seq(
+    publish := ((): Unit),
+    publishLocal := ((): Unit),
+    publishArtifact := false
+  )
+  
+  
+  lazy val clientSettings: Seq[Def.Setting[_]] = commonSettings ++
+    codeGenSettings ++
+    Seq(
+      libraryDependencies ++= Seq(
+        "io.higherkindness" %% "mu-rpc-netty" % V.mu,
+        "io.higherkindness" %% "mu-rpc-fs2"   % V.mu,
+        "org.typelevel"         %% "cats-effect" % V.catsEffect,
+        "com.github.pureconfig" %% "pureconfig"  % V.pureconfig,
+        "com.example" % "ping-pong-protocol" % "0.1.0"
+      )
+    )
+  
   override def projectSettings: Seq[Def.Setting[_]] =
     Seq(
-      name := "ping-pong-client",
+      name := "ping-pong",
       organization := "com.example",
       scalaVersion := "2.12.8",
       scalacOptions := Seq(
@@ -42,23 +75,6 @@ object ProjectPlugin extends AutoPlugin {
         "-Xfuture",
         "-Ywarn-unused-import"
       ),
-      idlType := "avro",
-      srcGenSerializationType := "Avro",
-      srcGenJarNames := Seq("ping-pong-protocol"),
-      srcGenTargetDir := (Compile / sourceManaged).value / "compiled_avro",
-      srcGenIDLTargetDir := (Compile / sourceManaged).value / "avro",
-      sourceGenerators in Compile += (Compile / srcGen).taskValue,
-      libraryDependencies ++= Seq(
-        "ch.qos.logback"    % "logback-classic" % V.logbackClassic,
-        "io.chrisdavenport" %% "log4cats-core"  % V.log4cats,
-        "io.chrisdavenport" %% "log4cats-slf4j" % V.log4cats,
-        "io.higherkindness" %% "mu-rpc-netty" % V.mu,
-        "io.higherkindness" %% "mu-rpc-fs2"   % V.mu,
-        "io.higherkindness" %% "mu-rpc-channel" % V.mu,
-        "org.typelevel"         %% "cats-effect" % V.catsEffect,
-        "com.github.pureconfig" %% "pureconfig"  % V.pureconfig,
-//        "com.example" % "ping-pong-protocol" % "0.1.0"
-      ),
-      addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
+      addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
     )
 }
